@@ -8,44 +8,45 @@ import (
     "net/http"
     "os"
     "net/url"
-    "sync"
     "time"
-    "strconv"
 
     "h12.io/socks"
+    "sync"
 )
+
+var threads = 0
+var wg sync.WaitGroup
 
 func main() {
     fmt.Print("\033[H\033[2J")
-
-    maxThreads, _ := strconv.Atoi(os.Args[1])
-    sem := make(chan struct{}, maxThreads)
-
-    go printThreads(sem)
-
-    var wg sync.WaitGroup
+    go func() {
+        for {
+            fmt.Println(threads)
+            time.Sleep(time.Second)
+        }
+    }()
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
-        proxy := scanner.Text()
-
-        sem <- struct{}{}
-
         wg.Add(1)
+        threads++
+        proxy := scanner.Text()
         go func() {
             defer func() {
-                <-sem
+                threads--
             }()
-            checkProxy(proxy, &wg, os.Args[2])
+            checkProxy(proxy, os.Args[1])
         }()
     }
     wg.Wait()
 }
 
 
-func checkProxy(proxy string, wg *sync.WaitGroup, port string) {
+func checkProxy(proxy string, port string) {
     defer wg.Done()
 
     httpClient := &http.Client{Timeout: time.Second * 8}
+    httpClient.Transport = &http.Transport{}
+    defer httpClient.Transport.(*http.Transport).CloseIdleConnections()
     var protocols = []string{"http", "socks4", "socks5"}
     for _, protocol := range protocols {
         url := "http://ip-api.com/json/"
@@ -107,16 +108,6 @@ func writeToFile(filename string, content string) {
     }
 }
 
-func contains(arr []string, elem string) bool {
-    for _, a := range arr {
-        if a == elem {
-            return true
-        }
-    }
-    return false
-}
-
-
 func MustParseURL(rawurl string) *url.URL {
     u, err := url.Parse(rawurl)
     if err != nil {
@@ -124,12 +115,3 @@ func MustParseURL(rawurl string) *url.URL {
     }
     return u
 }
-
-func printThreads(sem chan struct{}) {
-    for {
-        fmt.Print("\033[H\033[2J") // clear the shell
-        fmt.Printf("Running threads: %d\n", len(sem))
-        time.Sleep(time.Second)
-    }
-}
-
