@@ -46,6 +46,7 @@ func checkProxy(proxy string, port string) {
 
     httpClient := &http.Client{Timeout: time.Second * 8}
     httpClient.Transport = &http.Transport{}
+    proxyandport := fmt.Sprintf("%s:%s", proxy, port)
     defer httpClient.Transport.(*http.Transport).CloseIdleConnections()
     var protocols = []string{"http", "socks4", "socks5"}
     for _, protocol := range protocols {
@@ -80,13 +81,13 @@ func checkProxy(proxy string, port string) {
             if data["status"] == "success" {
                 switch protocol {
                 case "http":
-                    writeToFile("http.txt", proxy)
+                    writeToFile("http.txt", proxyandport)
                     fmt.Printf("%s://%s:%s - %s\n" , protocol, proxy, port, data["as"])
                 case "socks4":
-                    writeToFile("socks4.txt", proxy)
+                    writeToFile("socks4.txt", proxyandport)
                     fmt.Printf("%s://%s:%s - %s\n" , protocol, proxy, port, data["as"])
                 case "socks5":
-                    writeToFile("socks5.txt", proxy)
+                    writeToFile("socks5.txt", proxyandport)
                     fmt.Printf("%s://%s:%s - %s\n" , protocol, proxy, port, data["as"])
                 }
             }
